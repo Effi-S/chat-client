@@ -1,15 +1,14 @@
 import 'dart:convert';
+import 'package:web_socket_channel/html.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:web_socket_channel/io.dart';
 
 class WebSocketService {
-  late WebSocketChannel _channel;
-
-  void connect(WebSocketChannel channel) {
-    _channel = channel;
-  }
+  final WebSocketChannel _channel =
+      HtmlWebSocketChannel.connect('ws://localhost:8080/stomp');
 
   void subscribe() {
-    _channel.sink.add(jsonEncode({'destination': '/app/chat'}));
+    _channel.sink.add(jsonEncode({'destination': '/topic/messages'}));
     _channel.stream.listen((message) {
       print(message);
     });
@@ -17,7 +16,7 @@ class WebSocketService {
 
   void send(Map<String, String> data) {
     _channel.sink.add(jsonEncode({
-      'destination': '/app/chat',
+      'destination': '/topic/messages',
       'body': jsonEncode(data),
     }));
   }

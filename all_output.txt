@@ -1,0 +1,162 @@
+Core classes, functions, and methods:
+- `WebSocketClient`: A class that handles the WebSocket connection and message sending/receiving.
+  - `connect()`: Connects to the WebSocket server.
+  - `disconnect()`: Disconnects from the WebSocket server.
+  - `subscribe(topic)`: Subscribes to a topic on the WebSocket server.
+  - `unsubscribe(topic)`: Unsubscribes from a topic on the WebSocket server.
+  - `send_message(message, username)`: Sends a message to the WebSocket server.
+  - `on_message_received(message)`: A callback function that is called when a message is received from the WebSocket server.
+- `ApiClient`: A class that handles HTTP requests to the API server.
+  - `get_messages()`: Retrieves all messages from the API server.
+- `Message`: A data class that represents a chat message.
+  - `message`: The message content.
+  - `username`: The username of the message sender.
+
+Dockerfile:
+```dockerfile
+# Use an official Flutter runtime as a parent image
+FROM google/dart:2.14.4
+
+# Set the working directory to /app
+WORKDIR /app
+
+# Copy the pubspec.yaml and pubspec.lock files to the container
+COPY pubspec.* ./
+
+# Get the dependencies
+RUN pub get
+
+# Copy the rest of the application code to the container
+COPY . .
+
+# Build the application
+RUN dart compile exe bin/main.dart -o chat_client
+
+# Expose the port that the application will run on
+EXPOSE 8080
+
+# Run the application
+CMD ["./chat_client"]
+```
+
+main.dart:
+```dart
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:http/http.dart' as http;
+
+import 'message.dart';
+
+void main() async {
+  final webSocketClient = WebSocketClient();
+  await webSocketClient.connect();
+  await webSocketClient.subscribe('http://localhost:8080/topic/messages');
+
+  final apiClient = ApiClient();
+  final messages = await apiClient.getMessages();
+  for (final message in messages) {
+    print('${message.username}: ${message.message}');
+  }
+
+  while (true) {
+    final input = stdin.readLineSync();
+    if (input == 'exit') {
+      await webSocketClient.disconnect();
+      exit(0);
+    }
+    await webSocketClient.send_message(input, 'user');
+  }
+}
+
+class WebSocketClient {
+  WebSocket _webSocket;
+
+  Future<void> connect() async {
+    _webSocket = await WebSocket.connect('ws://localhost:8080/stomp');
+    _webSocket.listen((event) {
+      on_message_received(event);
+    });
+  }
+
+  Future<void> disconnect() async {
+    await _webSocket.close();
+  }
+
+  Future<void> subscribe(String topic) async {
+    final headers = {
+      'content-type': 'application/json',
+      'accept': 'application/json',
+    };
+    final body = jsonEncode({
+      'id': '0',
+      'destination': topic,
+    });
+    await _webSocket.add('CONNECT\n${_get_headers_string(headers)}\n$body\n\0');
+    await _webSocket.add('SUBSCRIBE\n${_get_headers_string(headers)}\n$body\n\0');
+  }
+
+  Future<void> unsubscribe(String topic) async {
+    final headers = {
+      'content-type': 'application/json',
+      'accept': 'application/json',
+    };
+    final body = jsonEncode({
+      'id': '0',
+      'destination': topic,
+    });
+    await _webSocket.add('UNSUBSCRIBE\n${_get_headers_string(headers)}\n$body\n\0');
+  }
+
+  Future<void> send_message(String message, String username) async {
+    final headers = {
+      'content-type': 'application/json',
+      'accept': 'application/json',
+    };
+    final body = jsonEncode({
+      'message': message,
+      'username': username,
+    });
+    await _webSocket.add('SEND\n${_get_headers_string(headers)}\n$body\n\0');
+  }
+
+  void on_message_received(String message) {
+    final headersEndIndex = message.indexOf('\n\n');
+    final body = message.substring(headersEndIndex + 2, message.length - 1);
+    final decodedBody = jsonDecode(body);
+    final chatMessage = Message(
+      message: decodedBody['message'],
+      username: decodedBody['username'],
+    );
+    print('${chatMessage.username}: ${chatMessage.message}');
+  }
+
+  String _get_headers_string(Map<String, String> headers) {
+    return headers.entries.map((e) => '${e.key}:${e.value}').join('\n');
+  }
+}
+
+class ApiClient {
+  Future<List<Message>> getMessages() async {
+    final response = await http.get(Uri.parse('http://localhost:8080/api/v1/users/get/all'));
+    final jsonList = jsonDecode(response.body) as List<dynamic>;
+    return jsonList.map((e) => Message(
+      message: e['message'] as String,
+      username: e['username'] as String,
+    )).toList();
+  }
+}
+```
+
+message.dart:
+```dart
+class Message {
+  final String message;
+  final String username;
+
+  Message({
+    required this.message,
+    required this.username,
+  });
+}
+```

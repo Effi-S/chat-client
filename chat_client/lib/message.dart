@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 class Message {
   final String username;
   final String text;

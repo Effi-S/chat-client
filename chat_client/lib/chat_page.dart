@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:chat_client/websocket_service.dart';
 import 'package:flutter/material.dart';
 import 'message.dart';
@@ -16,16 +18,24 @@ class _ChatPageState extends State<ChatPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final WebSocketService webSocketService = WebSocketService();
-  final MessageService messageService = MessageService();
+  late StreamSubscription<List<Message>> _messageSubscription;
+  List<Message> messages = [];
 
   @override
   void initState() {
     super.initState();
     webSocketService.subscribe();
+    _messageSubscription =
+        webSocketService.messageStream.listen((updatedMessages) {
+      setState(() {
+        messages = updatedMessages;
+      });
+    });
   }
 
   @override
   void dispose() {
+    _messageSubscription.cancel();
     webSocketService.disconnect();
     super.dispose();
   }
@@ -42,7 +52,6 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    List<Message> messages = webSocketService.get_messages();
     return Scaffold(
       appBar: AppBar(
         title: Text('Chat [${widget.username}]'),
@@ -57,7 +66,7 @@ class _ChatPageState extends State<ChatPage> {
                 Message message = messages[index];
                 return ListTile(
                   title: Text(message.username),
-                  subtitle: Text(message.text),
+                  subtitle: Text(message.message),
                 );
               },
             ),

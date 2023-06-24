@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:chat_client/websocket_service.dart';
 import 'package:flutter/material.dart';
 import 'message.dart';
-import 'message_service.dart';
 
 class ChatPage extends StatefulWidget {
   final String username;

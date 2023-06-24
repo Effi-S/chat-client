@@ -1,25 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:chat_client/message.dart';
-import 'package:web_socket_channel/html.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:web_socket_channel/io.dart';
 
 class WebSocketService {
-  // final WebSocketChannel _channel =
-  //     WebSocketChannel.connect(Uri.parse('ws://localhost:8080/stomp'));
-  // final WebSocketChannel chl = IOWebSocketChannel.connect(
-  //   Uri.parse('ws://localhost:8080/stomp'));
-  final WebSocketChannel _channel =
-      WebSocketChannel.connect(Uri.parse('wss://echo.websocket.events'));
+  final _channel = IOWebSocketChannel.connect('ws://localhost:8080/stomp');
+
+  // final _channel =
+  //     IOWebSocketChannel.connect(Uri.parse('wss://echo.websocket.events'));
   final StreamController<List<Message>> _messageController =
       StreamController<List<Message>>();
 
   Stream<List<Message>> get messageStream => _messageController.stream;
 
-  final List<Message> _messages = [
-    Message(username: 'user1', message: 'text'),
-    Message(username: 'user2', message: 'text2')
-  ];
+  final List<Message> _messages = [];
 
   void subscribe() {
     _channel.sink.add(jsonEncode({'destination': '/topic/messages'}));
@@ -46,7 +40,7 @@ class WebSocketService {
     print(_messages);
     print('--------------------------------');
     _channel.sink.add(jsonEncode({
-      // 'destination': '/topic/messages',
+      'destination': '/app/chat',
       'body': jsonEncode(data),
     }));
   }

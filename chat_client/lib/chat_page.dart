@@ -1,18 +1,12 @@
 import 'package:chat_client/websocket_service.dart';
 import 'package:flutter/material.dart';
 import 'message.dart';
+import 'message_service.dart';
 
 class ChatPage extends StatefulWidget {
   final String username;
-  final List<Message> messages;
-  final WebSocketService webSocketService;
 
-  const ChatPage({
-    Key? key,
-    required this.username,
-    required this.messages,
-    required this.webSocketService,
-  }) : super(key: key);
+  const ChatPage({Key? key, required this.username}) : super(key: key);
 
   @override
   _ChatPageState createState() => _ChatPageState();
@@ -21,11 +15,25 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final WebSocketService webSocketService = WebSocketService();
+  final MessageService messageService = MessageService();
+
+  @override
+  void initState() {
+    super.initState();
+    webSocketService.subscribe();
+  }
+
+  @override
+  void dispose() {
+    webSocketService.disconnect();
+    super.dispose();
+  }
 
   void _sendMessage() {
     String messageText = _messageController.text;
     if (messageText.isNotEmpty) {
-      widget.webSocketService.send(
+      webSocketService.send(
         {'message': messageText, 'username': widget.username},
       );
       _messageController.clear();
@@ -34,6 +42,7 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
+    List<Message> messages = webSocketService.get_messages();
     return Scaffold(
       appBar: AppBar(
         title: Text('Chat [${widget.username}]'),
@@ -43,9 +52,9 @@ class _ChatPageState extends State<ChatPage> {
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
-              itemCount: widget.messages.length,
+              itemCount: messages.length,
               itemBuilder: (context, index) {
-                Message message = widget.messages[index];
+                Message message = messages[index];
                 return ListTile(
                   title: Text(message.username),
                   subtitle: Text(message.text),

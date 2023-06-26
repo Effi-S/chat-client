@@ -4,10 +4,14 @@ import 'package:chat_client/message.dart';
 import 'package:web_socket_channel/io.dart';
 
 class WebSocketService {
-  final _channel = IOWebSocketChannel.connect('ws://localhost:8080/stomp');
+  // final _channel = IOWebSocketChannel.connect(
+  //     Uri.parse('ws://localhost:8080/stomp'),
+  //     protocols: ['STOMP']);
 
-  // final _channel =
-  //     IOWebSocketChannel.connect(Uri.parse('wss://echo.websocket.events'));
+  final _channel = IOWebSocketChannel.connect(
+      Uri.parse('wss://echo.websocket.events'),
+      protocols: ['STOMP']);
+
   final StreamController<List<Message>> _messageController =
       StreamController<List<Message>>();
 
@@ -28,8 +32,8 @@ class WebSocketService {
       if (msg.containsKey('message') && msg.containsKey('username')) {
         print('Adding message: ' + msg['message']);
         _messages.add(Message.fromJson(msg));
-        _messageController.add(_messages);
       }
+      _messageController.add(_messages);
       print('--------------------------------');
     });
   }

@@ -64,8 +64,8 @@ class _ChatPageState extends State<ChatPage> {
               itemBuilder: (context, index) {
                 Message message = messages[index];
                 return ListTile(
-                  title: Text(message.username),
-                  subtitle: Text(message.message),
+                  title: Text(message.message),
+                  subtitle: Text(message.username),
                 );
               },
             ),
